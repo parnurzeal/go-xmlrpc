@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-func Request(url string, method string, params ...interface{}) []interface{} {
+func Request(url string, method string, params ...interface{}) ([]interface{}, interface{}) {
 	request := Serialize(method, params)
 	log.Printf("%s", request)
 	buffer := bytes.NewBuffer([]byte(request))
@@ -23,12 +23,13 @@ func Request(url string, method string, params ...interface{}) []interface{} {
 		log.Fatal(err)
 	}
 	defer response.Body.Close()
-
-	return Unserialize(response.Body)
+	result, fault := Unserialize(response.Body)
+	return result, fault
 }
 
 type MethodResponse struct {
 	Params []Param `xml:"params>param"`
+	Fault  Value   `xml:"fault>value"`
 }
 
 type Param struct {
@@ -83,7 +84,7 @@ func unserialize(value Value) interface{} {
 	return nil
 }
 
-func Unserialize(buffer io.ReadCloser) []interface{} {
+func Unserialize(buffer io.ReadCloser) ([]interface{}, interface{}) {
 	body, err := ioutil.ReadAll(buffer)
 	if err != nil {
 		log.Fatal(err)
@@ -97,8 +98,9 @@ func Unserialize(buffer io.ReadCloser) []interface{} {
 	for i, param := range response.Params {
 		result[i] = unserialize(param.Value)
 	}
-
-	return result
+	fault := unserialize(response.Fault)
+	fmt.Println(fault)
+	return result, fault
 }
 
 func Serialize(method string, params []interface{}) string {
