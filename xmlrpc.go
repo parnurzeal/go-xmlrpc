@@ -13,18 +13,20 @@ import (
 	"time"
 )
 
-func Request(url string, method string, params ...interface{}) ([]interface{}, interface{}) {
+func Request(url string, method string, params ...interface{}) ([]interface{}, interface{}, string, error) {
 	request := Serialize(method, params)
-	log.Printf("%s", request)
 	buffer := bytes.NewBuffer([]byte(request))
 
 	response, err := http.Post(url, "text/xml", buffer)
 	if err != nil {
-		log.Fatal(err)
+		return nil, nil, "", err
 	}
 	defer response.Body.Close()
-	result, fault := Unserialize(response.Body)
-	return result, fault
+	resp, fault, err := Unserialize(response.Body)
+	if err != nil {
+		return nil, nil, "", err
+	}
+	return resp, fault, request, nil
 }
 
 type MethodResponse struct {
@@ -84,13 +86,11 @@ func unserialize(value Value) interface{} {
 	return nil
 }
 
-func Unserialize(buffer io.ReadCloser) ([]interface{}, interface{}) {
+func Unserialize(buffer io.ReadCloser) ([]interface{}, interface{}, error) {
 	body, err := ioutil.ReadAll(buffer)
 	if err != nil {
-		log.Fatal(err)
+		return nil, nil, err
 	}
-	log.Printf("%s", body)
-
 	var response MethodResponse
 	xml.Unmarshal(body, &response)
 
@@ -99,8 +99,7 @@ func Unserialize(buffer io.ReadCloser) ([]interface{}, interface{}) {
 		result[i] = unserialize(param.Value)
 	}
 	fault := unserialize(response.Fault)
-	fmt.Println(fault)
-	return result, fault
+	return result, fault, nil
 }
 
 func Serialize(method string, params []interface{}) string {
