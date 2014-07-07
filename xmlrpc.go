@@ -15,6 +15,7 @@ import (
 
 func Request(url string, method string, params ...interface{}) ([]interface{}, interface{}, string, error) {
 	request := Serialize(method, params)
+	//fmt.Println(request)
 	buffer := bytes.NewBuffer([]byte(request))
 
 	response, err := http.Post(url, "text/xml", buffer)
@@ -45,6 +46,7 @@ type Value struct {
 	Int      string   `xml:"int"`
 	Boolean  string   `xml:"boolean"`
 	DateTime string   `xml:"dateTime.iso8601"`
+	Double   string   `xml:"double"`
 }
 
 type Member struct {
@@ -81,8 +83,10 @@ func unserialize(value Value) interface{} {
 		var format = "20060102T15:04:05"
 		result, _ := time.Parse(format, value.DateTime)
 		return result
+	} else if value.Double != "" {
+		result, _ := strconv.ParseFloat(value.Double, 64)
+		return result
 	}
-
 	return nil
 }
 
@@ -93,7 +97,6 @@ func Unserialize(buffer io.ReadCloser) ([]interface{}, interface{}, error) {
 	}
 	var response MethodResponse
 	xml.Unmarshal(body, &response)
-
 	result := make([]interface{}, len(response.Params))
 	for i, param := range response.Params {
 		result[i] = unserialize(param.Value)
