@@ -147,7 +147,7 @@ func serialize(value interface{}) string {
 			for _, k := range tmpVal.MapKeys() {
 				v := tmpVal.MapIndex(k)
 				result += "<member>"
-				result += fmt.Sprintf("<name>%s</name>", k)
+				result += fmt.Sprintf("<name>%s</name>", k.Interface())
 				result += serialize(v.Interface())
 				result += "</member>"
 			}
