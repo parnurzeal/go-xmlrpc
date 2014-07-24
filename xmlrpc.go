@@ -126,24 +126,36 @@ func serialize(value interface{}) string {
 	switch value.(type) {
 	case string:
 		result += fmt.Sprintf("<string>%s</string>", value.(string))
-		break
-	case int:
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
 		result += fmt.Sprintf("<int>%d</int>", value)
-		break
+	case float32, float64:
+		result += fmt.Sprintf("<float>%f</float>", value)
+	case map[string]interface{}:
+		result += "<struct>"
+		for k, v := range value.(map[string]interface{}) {
+			result += "<member>"
+			result += fmt.Sprintf("<name>%s</name>", k)
+			result += serialize(v)
+			result += "</member>"
+		}
+		result += "</struct>"
+
 	default:
-		if reflect.ValueOf(value).Kind() == reflect.Map {
+		tmpVal := reflect.ValueOf(value)
+		if tmpVal.Kind() == reflect.Map {
 			result += "<struct>"
-			for k, v := range value.(map[string]interface{}) {
+			for _, k := range tmpVal.MapKeys() {
+				v := tmpVal.MapIndex(k)
 				result += "<member>"
 				result += fmt.Sprintf("<name>%s</name>", k)
-				result += serialize(v)
+				result += serialize(v.Interface())
 				result += "</member>"
 			}
 			result += "</struct>"
-		} else {
-			log.Fatal(value)
-		}
 
+		} else {
+			log.Fatal("Cannot serialise: ", value)
+		}
 	}
 	result += "</value>"
 	return result
